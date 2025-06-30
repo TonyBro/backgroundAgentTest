@@ -50,4 +50,4 @@ logs
 *.log
 
 # Cursor specific (но environment.json нужен для Background Agent)
-# .cursor/environment.json уже включен в проект намеренно 
+# .cursor/environment.json уже включен в проект намеренно /package-lock.json
