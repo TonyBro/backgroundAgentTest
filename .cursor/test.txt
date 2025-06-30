@@ -1,0 +1,3 @@
+Test file to verify GitHub connection with Cursor Background Agent
+Created at: 2024-01-15
+Repository: https://github.com/TonyBro/backgroundAgentTest 
