@@ -1,18 +1,19 @@
 {
   "name": "pingpong-agents",
   "version": "3.0.0",
-  "description": "Система двух агентов с пинг-понг коммуникацией через IPC",
+  "description": "Система двух независимых агентов с пинг-понг коммуникацией через TCP сокеты",
   "main": "cursor-agent.js",
   "scripts": {
+    "server": "node cursor-agent.js",
+    "client": "node cursor-agent-secondary.js",
     "start": "node cursor-agent.js",
     "dev": "node cursor-agent.js",
-    "test": "node cursor-agent.js",
-    "ping-pong": "node cursor-agent.js"
+    "test": "node cursor-agent.js"
   },
   "engines": {
     "node": ">=12.0.0"
   },
-  "keywords": ["agents", "ping-pong", "ipc", "background", "communication", "multi-process"],
+  "keywords": ["agents", "ping-pong", "tcp", "sockets", "background", "communication", "networking"],
   "author": "",
   "license": "ISC"
 } 

@@ -1,21 +1,22 @@
 /**
- * Cursor Background Agent - Main Agent (Agent1)
- * Основной агент, который запускает второй агент и выполняет пинг-понг коммуникацию
+ * Cursor Background Agent - Server Agent (Agent1)
+ * Первый независимый агент, который работает как TCP сервер и ждет подключения второго агента
  */
 
-const { fork } = require('child_process');
-const path = require('path');
+const net = require('net');
 
-class CursorBackgroundAgent {
-    constructor() {
-        this.agentId = 'Agent1';
+class CursorBackgroundAgentServer {
+    constructor(port = 3001) {
+        this.agentId = 'Agent1-Server';
+        this.port = port;
         this.startTime = new Date();
         this.sessionId = this.generateSessionId();
         this.isRunning = false;
         
-        // Для работы с вторичным агентом
-        this.secondaryAgent = null;
-        this.secondaryAgentReady = false;
+        // TCP сервер и клиент
+        this.server = null;
+        this.clientSocket = null;
+        this.isClientConnected = false;
         this.handshakeComplete = false;
         
         // Счетчики пинг-понг
@@ -29,17 +30,17 @@ class CursorBackgroundAgent {
 
     start() {
         if (this.isRunning) {
-            this.log('🔄 Агент уже запущен');
+            this.log('🔄 Сервер агент уже запущен');
             return;
         }
 
         this.isRunning = true;
-        this.log('🚀 Основной агент (Agent1) запущен');
+        this.log('🚀 Запуск Agent1 как TCP сервера');
         this.log(`📋 Session ID: ${this.sessionId}`);
         this.log(`🔧 PID: ${process.pid}`);
+        this.log(`🌐 Порт: ${this.port}`);
 
-        // Создаем вторичный агент с инструкциями
-        this.createSecondaryAgentWithInstructions();
+        this.createTCPServer();
 
         // Обработка сигналов для корректного завершения
         process.on('SIGINT', () => this.stop());
@@ -47,80 +48,56 @@ class CursorBackgroundAgent {
         process.on('SIGUSR1', () => this.showStatus());
     }
 
-    createSecondaryAgentWithInstructions() {
-        this.log('🔄 Создание второго агента с инструкциями...');
-        
-        const secondaryAgentPath = path.join(__dirname, 'cursor-agent-secondary.js');
-        
-        try {
-            // Инструкции для второго агента
-            const instructions = {
-                role: 'secondary_agent',
-                task: 'pingpong_responder',
-                commands: [
-                    'Запустись как Agent2',
-                    'Отвечай на хэндшейк сообщением "Привет!"',
-                    'На каждый PING отвечай PONG',
-                    'Логируй все действия в консоль'
-                ],
-                parentAgentId: this.agentId,
-                parentSessionId: this.sessionId
-            };
+    createTCPServer() {
+        this.server = net.createServer((socket) => {
+            this.log('🔗 Клиент подключился к серверу');
+            this.clientSocket = socket;
+            this.isClientConnected = true;
 
-            // Создаем процесс с инструкциями
-            this.secondaryAgent = fork(secondaryAgentPath, [], {
-                stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
-                env: {
-                    ...process.env,
-                    AGENT_INSTRUCTIONS: JSON.stringify(instructions)
+            // Обработка данных от клиента
+            socket.on('data', (data) => {
+                try {
+                    const message = JSON.parse(data.toString());
+                    this.handleClientMessage(message);
+                } catch (error) {
+                    this.log(`❌ Ошибка парсинга сообщения: ${error.message}`);
                 }
             });
 
-            this.log(`✅ Второй агент создан с PID: ${this.secondaryAgent.pid}`);
-            this.log('📋 Инструкции переданы второму агенту');
-
-            // Обработка сообщений от вторичного агента
-            this.secondaryAgent.on('message', (message) => {
-                this.handleSecondaryAgentMessage(message);
-            });
-
-            // Обработка ошибок и завершения вторичного агента
-            this.secondaryAgent.on('error', (error) => {
-                this.log(`❌ Ошибка второго агента: ${error.message}`);
-            });
-
-            this.secondaryAgent.on('exit', (code, signal) => {
-                this.log(`🚪 Второй агент завершился (code: ${code}, signal: ${signal})`);
-                this.secondaryAgentReady = false;
+            // Обработка отключения клиента
+            socket.on('close', () => {
+                this.log('🚪 Клиент отключился');
+                this.isClientConnected = false;
                 this.handshakeComplete = false;
+                this.clientSocket = null;
             });
 
-            // Отправляем инструкции второму агенту
-            this.sendInstructionsToSecondaryAgent(instructions);
+            socket.on('error', (error) => {
+                this.log(`❌ Ошибка сокета: ${error.message}`);
+            });
 
-        } catch (error) {
-            this.log(`❌ Ошибка создания второго агента: ${error.message}`);
-        }
+            // Инициируем хэндшейк после подключения
+            setTimeout(() => {
+                this.initiateHandshake();
+            }, 500);
+        });
+
+        this.server.listen(this.port, () => {
+            this.log(`✅ TCP сервер запущен на порту ${this.port}`);
+            this.log('⏳ Ожидание подключения Agent2...');
+        });
+
+        this.server.on('error', (error) => {
+            this.log(`❌ Ошибка сервера: ${error.message}`);
+        });
     }
 
-    sendInstructionsToSecondaryAgent(instructions) {
-        const instructionMessage = {
-            type: 'instructions',
-            data: instructions,
-            timestamp: new Date().toISOString(),
-            sender: this.agentId
-        };
-
-        this.secondaryAgent.send(instructionMessage);
-        this.log('📤 Инструкции отправлены второму агенту');
-    }
-
-    handleSecondaryAgentMessage(message) {
-        this.log(`📨 [${this.agentId}] Получено сообщение от ${message.sender}: ${message.type}`);
+    handleClientMessage(message) {
+        this.log(`📨 [${this.agentId}] Получено от ${message.sender}: ${message.type} - "${message.data}"`);
 
         switch (message.type) {
             case 'ready':
-                this.handleSecondaryAgentReady(message);
+                this.handleClientReady(message);
                 break;
             case 'handshake_response':
                 this.handleHandshakeResponse(message);
@@ -133,24 +110,18 @@ class CursorBackgroundAgent {
         }
     }
 
-    handleSecondaryAgentReady(message) {
-        this.log('✅ Второй агент готов к работе');
+    handleClientReady(message) {
+        this.log('✅ Agent2 готов к работе');
         this.log(`📋 Сообщение от Agent2: "${message.data}"`);
-        this.secondaryAgentReady = true;
-        
-        // Инициируем хэндшейк
-        setTimeout(() => {
-            this.initiateHandshake();
-        }, 500);
     }
 
     initiateHandshake() {
-        if (!this.secondaryAgentReady) {
-            this.log('⚠️ Второй агент не готов для хэндшейка');
+        if (!this.isClientConnected || !this.clientSocket) {
+            this.log('⚠️ Клиент не подключен для хэндшейка');
             return;
         }
 
-        this.log('🤝 Инициирую хэндшейк с вторым агентом');
+        this.log('🤝 Инициирую хэндшейк с Agent2');
         
         const handshakeMessage = {
             type: 'handshake_init',
@@ -159,24 +130,24 @@ class CursorBackgroundAgent {
             sender: this.agentId
         };
 
-        this.secondaryAgent.send(handshakeMessage);
+        this.sendToClient(handshakeMessage);
         this.log(`📤 [${this.agentId}] Отправлен хэндшейк: "${handshakeMessage.data}"`);
     }
 
     handleHandshakeResponse(message) {
-        this.log('🤝 Получен ответ на хэндшейк от второго агента');
-        this.log(`📥 [${this.agentId}] Второй агент ответил: "${message.data}"`);
+        this.log('🤝 Получен ответ на хэндшейк от Agent2');
+        this.log(`📥 [${this.agentId}] Agent2 ответил: "${message.data}"`);
         
         this.handshakeComplete = true;
-        this.log('✅ Хэндшейк завершен! Готов к пинг-понг коммуникации');
+        this.log('✅ Хэндшейк завершен! Начинаю пинг-понг коммуникацию');
         
         // Отправляем первый пинг
         this.sendPing();
     }
 
     sendPing() {
-        if (!this.handshakeComplete || !this.secondaryAgent) {
-            this.log('⚠️ Нельзя отправить пинг - система не готова');
+        if (!this.handshakeComplete || !this.isClientConnected || !this.clientSocket) {
+            this.log('⚠️ Нельзя отправить пинг - соединение не готово');
             return;
         }
 
@@ -188,7 +159,7 @@ class CursorBackgroundAgent {
             sender: this.agentId
         };
 
-        this.secondaryAgent.send(pingMessage);
+        this.sendToClient(pingMessage);
         this.log(`🏓 [${this.agentId}] Отправлен PING: "${pingMessage.data}"`);
     }
 
@@ -196,10 +167,16 @@ class CursorBackgroundAgent {
         this.pongCount++;
         this.log(`🏓 [${this.agentId}] Получен PONG от ${message.sender}: "${message.data}" (#${this.pongCount})`);
         
-        // Отправляем следующий пинг через небольшую паузу
+        // Отправляем следующий пинг через секунду
         setTimeout(() => {
             this.sendPing();
         }, 1000);
+    }
+
+    sendToClient(message) {
+        if (this.clientSocket && this.isClientConnected) {
+            this.clientSocket.write(JSON.stringify(message));
+        }
     }
 
     log(message) {
@@ -213,7 +190,8 @@ class CursorBackgroundAgent {
         this.log(`[${this.agentId}] Статус: ${this.isRunning ? 'Активен' : 'Остановлен'}`);
         this.log(`Время работы: ${uptime} секунд`);
         this.log(`Session ID: ${this.sessionId}`);
-        this.log(`Второй агент готов: ${this.secondaryAgentReady}`);
+        this.log(`TCP порт: ${this.port}`);
+        this.log(`Клиент подключен: ${this.isClientConnected}`);
         this.log(`Хэндшейк завершен: ${this.handshakeComplete}`);
         this.log(`Пингов отправлено: ${this.pingCount}`);
         this.log(`Понгов получено: ${this.pongCount}`);
@@ -225,24 +203,29 @@ class CursorBackgroundAgent {
             return;
         }
 
-        this.log('\n🛑 Остановка системы агентов...');
+        this.log('\n🛑 Остановка сервер агента...');
         this.isRunning = false;
 
-        // Завершаем второй агент
-        if (this.secondaryAgent) {
-            this.log('🔄 Завершение второго агента...');
-            this.secondaryAgent.kill('SIGTERM');
-            this.secondaryAgent = null;
+        // Закрываем соединение с клиентом
+        if (this.clientSocket) {
+            this.clientSocket.end();
+            this.clientSocket = null;
+        }
+
+        // Закрываем сервер
+        if (this.server) {
+            this.server.close(() => {
+                this.log('🔒 TCP сервер закрыт');
+            });
         }
 
         const uptime = Math.floor((new Date() - this.startTime) / 1000);
-        this.log(`✅ Система агентов остановлена. Время работы: ${uptime}с`);
+        this.log(`✅ Сервер агент остановлен. Время работы: ${uptime}с`);
         this.log(`📊 Статистика: Пингов: ${this.pingCount}, Понгов: ${this.pongCount}`);
         
         process.exit(0);
     }
 
-    // Метод для получения метрик
     getMetrics() {
         const uptime = Math.floor((new Date() - this.startTime) / 1000);
         return {
@@ -250,21 +233,20 @@ class CursorBackgroundAgent {
             isRunning: this.isRunning,
             sessionId: this.sessionId,
             uptime: uptime,
-            secondaryAgent: {
-                ready: this.secondaryAgentReady,
-                handshakeComplete: this.handshakeComplete,
-                pingCount: this.pingCount,
-                pongCount: this.pongCount
-            }
+            port: this.port,
+            clientConnected: this.isClientConnected,
+            handshakeComplete: this.handshakeComplete,
+            pingCount: this.pingCount,
+            pongCount: this.pongCount
         };
     }
 }
 
-// Создание и запуск агента
-const agent = new CursorBackgroundAgent();
+// Создание и запуск сервер агента
+const serverAgent = new CursorBackgroundAgentServer();
 
 // Запускаем агент
-agent.start();
+serverAgent.start();
 
 // Экспортируем для возможного использования
-module.exports = CursorBackgroundAgent; 
+module.exports = CursorBackgroundAgentServer; 

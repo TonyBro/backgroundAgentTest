@@ -1,20 +1,29 @@
 /**
- * Cursor Background Agent - Secondary Agent (Agent2)
- * Второй агент, который получает инструкции от основного агента и выполняет пинг-понг
+ * Cursor Background Agent - Client Agent (Agent2)
+ * Второй независимый агент, который работает как TCP клиент и подключается к первому агенту
  */
 
-class CursorSecondaryAgent {
-    constructor() {
-        this.agentId = 'Agent2';
+const net = require('net');
+
+class CursorBackgroundAgentClient {
+    constructor(host = 'localhost', port = 3001) {
+        this.agentId = 'Agent2-Client';
+        this.host = host;
+        this.port = port;
         this.startTime = new Date();
         this.sessionId = this.generateSessionId();
-        this.isReady = false;
+        this.isRunning = false;
+        
+        // TCP клиент
+        this.client = null;
+        this.isConnected = false;
         this.handshakeComplete = false;
         this.messageCount = 0;
         
-        // Инструкции от основного агента
-        this.instructions = null;
-        this.parentAgentId = null;
+        // Настройки подключения
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 10;
+        this.reconnectInterval = 2000;
     }
 
     generateSessionId() {
@@ -22,76 +31,96 @@ class CursorSecondaryAgent {
     }
 
     start() {
-        this.log('🚀 Второй агент (Agent2) запускается...');
+        if (this.isRunning) {
+            this.log('🔄 Клиент агент уже запущен');
+            return;
+        }
+
+        this.isRunning = true;
+        this.log('🚀 Запуск Agent2 как TCP клиента');
         this.log(`📋 Session ID: ${this.sessionId}`);
         this.log(`🔧 PID: ${process.pid}`);
+        this.log(`🌐 Подключение к: ${this.host}:${this.port}`);
 
-        // Проверяем инструкции из переменных окружения
-        this.loadInstructionsFromEnv();
-
-        // Настраиваем обработку сообщений от основного агента
-        process.on('message', (message) => {
-            this.handleMessage(message);
-        });
+        this.connectToServer();
 
         // Обработка сигналов завершения
         process.on('SIGINT', () => this.stop());
         process.on('SIGTERM', () => this.stop());
-
-        // Отправляем сигнал готовности основному агенту
-        this.sendReady();
     }
 
-    loadInstructionsFromEnv() {
-        try {
-            if (process.env.AGENT_INSTRUCTIONS) {
-                this.instructions = JSON.parse(process.env.AGENT_INSTRUCTIONS);
-                this.parentAgentId = this.instructions.parentAgentId;
-                this.log('📋 Инструкции загружены из переменных окружения');
-                this.executeInstructions();
+    connectToServer() {
+        this.log(`🔄 Попытка подключения к серверу ${this.host}:${this.port}...`);
+        
+        this.client = new net.Socket();
+
+        this.client.connect(this.port, this.host, () => {
+            this.log('✅ Успешно подключен к серверу');
+            this.isConnected = true;
+            this.reconnectAttempts = 0;
+            
+            // Отправляем сигнал готовности
+            this.sendReady();
+        });
+
+        this.client.on('data', (data) => {
+            try {
+                const message = JSON.parse(data.toString());
+                this.handleServerMessage(message);
+            } catch (error) {
+                this.log(`❌ Ошибка парсинга сообщения: ${error.message}`);
             }
-        } catch (error) {
-            this.log(`⚠️ Ошибка загрузки инструкций: ${error.message}`);
-        }
+        });
+
+        this.client.on('close', () => {
+            this.log('🚪 Соединение с сервером закрыто');
+            this.isConnected = false;
+            this.handshakeComplete = false;
+            this.scheduleReconnect();
+        });
+
+        this.client.on('error', (error) => {
+            this.log(`❌ Ошибка подключения: ${error.message}`);
+            this.isConnected = false;
+            this.scheduleReconnect();
+        });
     }
 
-    executeInstructions() {
-        if (!this.instructions) {
-            this.log('⚠️ Инструкции не найдены');
+    scheduleReconnect() {
+        if (!this.isRunning) return;
+        
+        this.reconnectAttempts++;
+        if (this.reconnectAttempts > this.maxReconnectAttempts) {
+            this.log(`❌ Превышено максимальное количество попыток подключения (${this.maxReconnectAttempts})`);
+            this.stop();
             return;
         }
 
-        this.log('📝 Выполняю полученные инструкции:');
-        this.instructions.commands.forEach((command, index) => {
-            this.log(`   ${index + 1}. ${command}`);
-        });
-
-        this.log(`👤 Роль: ${this.instructions.role}`);
-        this.log(`🎯 Задача: ${this.instructions.task}`);
-        this.log(`🔗 Родительский агент: ${this.instructions.parentAgentId}`);
+        this.log(`🔄 Попытка переподключения #${this.reconnectAttempts} через ${this.reconnectInterval/1000}с...`);
+        setTimeout(() => {
+            if (this.isRunning) {
+                this.connectToServer();
+            }
+        }, this.reconnectInterval);
     }
 
     sendReady() {
         const message = {
             type: 'ready',
-            data: 'Agent2 запущен и готов выполнять инструкции',
+            data: 'Agent2 запущен и готов к работе',
             timestamp: new Date().toISOString(),
             sender: this.agentId
         };
 
-        process.send(message);
-        this.isReady = true;
-        this.log('✅ Отправлен сигнал готовности основному агенту');
+        this.sendToServer(message);
+        this.log('✅ Отправлен сигнал готовности серверу');
     }
 
-    handleMessage(message) {
+    handleServerMessage(message) {
         this.messageCount++;
-        this.log(`📨 Получено сообщение: ${message.type} от ${message.sender}`);
+        this.log(`📨 [${this.agentId}] Получено от ${message.sender}: ${message.type} - "${message.data}"`);
 
         switch (message.type) {
-            case 'instructions':
-                this.handleInstructions(message);
-                break;
             case 'handshake_init':
                 this.handleHandshakeInit(message);
                 break;
@@ -103,24 +132,11 @@ class CursorSecondaryAgent {
         }
     }
 
-    handleInstructions(message) {
-        this.log('📋 Получены инструкции от основного агента');
-        this.instructions = message.data;
-        this.parentAgentId = message.sender;
-        
-        this.log('📝 Инструкции получены:');
-        this.instructions.commands.forEach((command, index) => {
-            this.log(`   ${index + 1}. ${command}`);
-        });
-
-        this.executeInstructions();
-    }
-
     handleHandshakeInit(message) {
-        this.log('🤝 Получен запрос на хэндшейк от основного агента');
+        this.log('🤝 Получен запрос на хэндшейк от сервера');
         this.log(`📥 ${message.sender} сказал: "${message.data}"`);
 
-        // Выполняем инструкцию: "Отвечай на хэндшейк сообщением 'Привет!'"
+        // Отвечаем на хэндшейк
         const response = {
             type: 'handshake_response',
             data: 'Привет!',
@@ -128,9 +144,9 @@ class CursorSecondaryAgent {
             sender: this.agentId
         };
 
-        process.send(response);
+        this.sendToServer(response);
         this.handshakeComplete = true;
-        this.log('📤 Ответил на хэндшейк: "Привет!" (согласно инструкциям)');
+        this.log('📤 Ответил на хэндшейк: "Привет!"');
         this.log('✅ Хэндшейк завершен, готов к пинг-понг коммуникации');
     }
 
@@ -140,9 +156,9 @@ class CursorSecondaryAgent {
             return;
         }
 
-        this.log(`🏓 Получен PING: "${message.data}"`);
+        this.log(`🏓 [${this.agentId}] Получен PING: "${message.data}"`);
 
-        // Выполняем инструкцию: "На каждый PING отвечай PONG"
+        // Отвечаем понгом
         const pongResponse = {
             type: 'pong',
             data: 'PONG! 🏓',
@@ -150,20 +166,55 @@ class CursorSecondaryAgent {
             sender: this.agentId
         };
 
-        process.send(pongResponse);
-        this.log(`🏓 Отправлен PONG: "${pongResponse.data}" (согласно инструкциям)`);
+        this.sendToServer(pongResponse);
+        this.log(`🏓 [${this.agentId}] Отправлен PONG: "${pongResponse.data}"`);
+    }
+
+    sendToServer(message) {
+        if (this.client && this.isConnected) {
+            this.client.write(JSON.stringify(message));
+        } else {
+            this.log('⚠️ Нет соединения с сервером для отправки сообщения');
+        }
     }
 
     log(message) {
         const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] [${this.agentId}] ${message}`);
+        console.log(`[${timestamp}] ${message}`);
+    }
+
+    showStatus() {
+        const uptime = Math.floor((new Date() - this.startTime) / 1000);
+        this.log('=== CLIENT STATUS REPORT ===');
+        this.log(`[${this.agentId}] Статус: ${this.isRunning ? 'Активен' : 'Остановлен'}`);
+        this.log(`Время работы: ${uptime} секунд`);
+        this.log(`Session ID: ${this.sessionId}`);
+        this.log(`Сервер: ${this.host}:${this.port}`);
+        this.log(`Подключен к серверу: ${this.isConnected}`);
+        this.log(`Хэндшейк завершен: ${this.handshakeComplete}`);
+        this.log(`Сообщений получено: ${this.messageCount}`);
+        this.log(`Попыток переподключения: ${this.reconnectAttempts}`);
+        this.log('=== END CLIENT STATUS ===');
     }
 
     stop() {
-        this.log('🛑 Остановка второго агента...');
+        if (!this.isRunning) {
+            return;
+        }
+
+        this.log('\n🛑 Остановка клиент агента...');
+        this.isRunning = false;
+
+        // Закрываем соединение
+        if (this.client) {
+            this.client.destroy();
+            this.client = null;
+        }
+
         const uptime = Math.floor((new Date() - this.startTime) / 1000);
-        this.log(`✅ Второй агент остановлен. Время работы: ${uptime}с, Сообщений: ${this.messageCount}`);
-        this.log('📋 Все инструкции были выполнены');
+        this.log(`✅ Клиент агент остановлен. Время работы: ${uptime}с`);
+        this.log(`📊 Сообщений обработано: ${this.messageCount}`);
+        
         process.exit(0);
     }
 
@@ -171,19 +222,23 @@ class CursorSecondaryAgent {
         const uptime = Math.floor((new Date() - this.startTime) / 1000);
         return {
             agentId: this.agentId,
+            isRunning: this.isRunning,
             sessionId: this.sessionId,
-            isReady: this.isReady,
-            handshakeComplete: this.handshakeComplete,
             uptime: uptime,
+            host: this.host,
+            port: this.port,
+            isConnected: this.isConnected,
+            handshakeComplete: this.handshakeComplete,
             messageCount: this.messageCount,
-            parentAgentId: this.parentAgentId,
-            instructionsReceived: !!this.instructions
+            reconnectAttempts: this.reconnectAttempts
         };
     }
 }
 
-// Создание и запуск второго агента
-const secondaryAgent = new CursorSecondaryAgent();
-secondaryAgent.start();
+// Создание и запуск клиент агента
+const clientAgent = new CursorBackgroundAgentClient();
 
-module.exports = CursorSecondaryAgent; 
+// Запускаем агент
+clientAgent.start();
+
+module.exports = CursorBackgroundAgentClient; 
