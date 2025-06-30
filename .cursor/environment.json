@@ -1,0 +1,14 @@
+{
+  "install": "npm install",
+  "start": "echo '🚀 Cursor Background Agent environment готова к работе'",
+  "terminals": [
+    {
+      "name": "Background VLOG Agent",
+      "command": "node cursor-agent.js"
+    },
+    {
+      "name": "Status Monitor",
+      "command": "echo '📊 Monitoring Background Agent Status...' && sleep 5 && while true; do echo '--- Agent Status Check ---' && ps aux | grep 'node cursor-agent.js' | grep -v grep && sleep 30; done"
+    }
+  ]
+} 
