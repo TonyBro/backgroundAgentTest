@@ -1,20 +1,18 @@
 {
-  "name": "background-agent",
-  "version": "2.0.0",
-  "description": "Фоновый агент с Worker Threads для вывода сообщений в консоль",
-  "main": "agent.js",
+  "name": "pingpong-agents",
+  "version": "3.0.0",
+  "description": "Система двух агентов с пинг-понг коммуникацией через IPC",
+  "main": "cursor-agent.js",
   "scripts": {
-    "start": "node agent.js",
-    "dev": "node agent.js",
-    "test": "node --experimental-worker worker.js",
-    "example": "node example.js",
-    "cursor": "node cursor-agent.js",
-    "cursor-test": "AGENT_INTERVAL=1000 node cursor-agent.js"
+    "start": "node cursor-agent.js",
+    "dev": "node cursor-agent.js",
+    "test": "node cursor-agent.js",
+    "ping-pong": "node cursor-agent.js"
   },
   "engines": {
     "node": ">=12.0.0"
   },
-  "keywords": ["background", "agent", "logging", "worker-threads", "multithreading"],
+  "keywords": ["agents", "ping-pong", "ipc", "background", "communication", "multi-process"],
   "author": "",
   "license": "ISC"
 } 
