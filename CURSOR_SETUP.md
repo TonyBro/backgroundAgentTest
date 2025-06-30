@@ -1,19 +1,19 @@
 # Cursor Background Agent Setup
 
-Инструкция по настройке и запуску Background Agent в системе Cursor.
+Instructions for setting up and running Background Agent in Cursor system.
 
-## 📋 Что такое Cursor Background Agent
+## 📋 What is Cursor Background Agent
 
-Cursor Background Agent - это асинхронный удаленный агент, который может редактировать и запускать ваш код в изолированной виртуальной машине. Агент работает в фоне и может выполнять задачи независимо от вашего локального окружения.
+Cursor Background Agent is an asynchronous remote agent that can edit and run your code in an isolated virtual machine. The agent works in the background and can perform tasks independently of your local environment.
 
-## 🚀 Быстрый старт
+## 🚀 Quick Start
 
-### 1. Настройка репозитория
+### 1. Repository Setup
 
-Убедитесь, что ваш проект находится в Git репозитории на GitHub, так как Cursor Background Agent клонирует код из GitHub.
+Make sure your project is in a Git repository on GitHub, as Cursor Background Agent clones code from GitHub.
 
 ```bash
-# Если репозиторий еще не создан:
+# If repository is not created yet:
 git init
 git add .
 git commit -m "Initial commit for Cursor Background Agent"
@@ -21,42 +21,42 @@ git remote add origin https://github.com/username/your-repo.git
 git push -u origin main
 ```
 
-### 2. Запуск Background Agent
+### 2. Starting Background Agent
 
-1. **Откройте Cursor Background Agent панель**: `Ctrl+E` (или `Cmd+E` на Mac)
-2. **Создайте новый агент**: Нажмите кнопку создания нового агента
-3. **Отправьте задачу**: Введите что-то вроде "Запусти background agent для логирования VLOG сообщений"
+1. **Open Cursor Background Agent panel**: `Ctrl+E` (or `Cmd+E` on Mac)
+2. **Create new agent**: Click the new agent creation button
+3. **Send task**: Enter something like "Start background agent for VLOG message logging"
 
-### 3. Проверка работы
+### 3. Checking Operation
 
-Agent автоматически:
-- Клонирует ваш репозиторий
-- Запустит `npm install` (команда install из environment.json)
-- Запустит терминалы с Background VLOG Agent и Status Monitor
+Agent automatically:
+- Clones your repository
+- Runs `npm install` (install command from environment.json)
+- Starts terminals with Background VLOG Agent and Status Monitor
 
-## 📁 Структура проекта
+## 📁 Project Structure
 
 ```
 backgroundAgent/
 ├── .cursor/
-│   └── environment.json     # Конфигурация Cursor Background Agent
-├── agent.js                 # Локальная версия с Worker Threads
-├── cursor-agent.js          # Версия для Cursor Background Agent
-├── worker.js               # Worker Thread для локальной версии
-├── example.js              # Пример использования
-├── package.json            # Зависимости Node.js
-├── README.md               # Основная документация
-└── CURSOR_SETUP.md         # Эта инструкция
+│   └── environment.json     # Cursor Background Agent configuration
+├── agent.js                 # Local version with Worker Threads
+├── cursor-agent.js          # Version for Cursor Background Agent
+├── worker.js               # Worker Thread for local version
+├── example.js              # Usage example
+├── package.json            # Node.js dependencies
+├── README.md               # Main documentation
+└── CURSOR_SETUP.md         # This instruction
 ```
 
-## ⚙️ Конфигурация environment.json
+## ⚙️ environment.json Configuration
 
-Файл `.cursor/environment.json` содержит настройки для Cursor Background Agent:
+The `.cursor/environment.json` file contains settings for Cursor Background Agent:
 
 ```json
 {
   "install": "npm install",
-  "start": "echo '🚀 Cursor Background Agent environment готова к работе'",
+  "start": "echo '🚀 Cursor Background Agent environment ready to work'",
   "terminals": [
     {
       "name": "Background VLOG Agent",
@@ -70,109 +70,109 @@ backgroundAgent/
 }
 ```
 
-### Описание параметров:
+### Parameter description:
 
-- **install**: Команда для установки зависимостей (выполняется при каждом старте)
-- **start**: Команда инициализации среды
-- **terminals**: Массив терминалов, которые будут запущены в tmux сессии
+- **install**: Command for dependency installation (executed on each start)
+- **start**: Environment initialization command
+- **terminals**: Array of terminals that will be started in tmux session
 
-## 🔧 Настройки агента
+## 🔧 Agent Settings
 
-Вы можете настроить поведение агента через переменные окружения:
+You can configure agent behavior through environment variables:
 
 ```bash
-# Изменить интервал логирования (в миллисекундах)
+# Change logging interval (in milliseconds)
 export AGENT_INTERVAL=5000
 
-# Запустить агент с новым интервалом
+# Start agent with new interval
 node cursor-agent.js
 ```
 
-## 📊 Мониторинг агента
+## 📊 Agent Monitoring
 
-### Встроенные команды
+### Built-in Commands
 
-Agent поддерживает сигналы для управления:
+Agent supports signals for control:
 
 ```bash
-# Показать статус (отправить SIGUSR1)
+# Show status (send SIGUSR1)
 kill -USR1 <PID>
 
-# Изменить интервал (отправить SIGUSR2)
+# Change interval (send SIGUSR2)
 kill -USR2 <PID>
 
-# Остановить агент (отправить SIGTERM)
+# Stop agent (send SIGTERM)
 kill -TERM <PID>
 ```
 
-### Логи агента
+### Agent Logs
 
-Agent выводит детальные логи с временными метками:
+Agent outputs detailed logs with timestamps:
 
 ```
-[2024-01-15T10:30:00.000Z] VLOG: 🚀 Cursor Background Agent запущен в удаленной среде
+[2024-01-15T10:30:00.000Z] VLOG: 🚀 Cursor Background Agent started in remote environment
 [2024-01-15T10:30:00.001Z] VLOG: Session ID: abc123def456
-[2024-01-15T10:30:00.002Z] VLOG: привет из бэкграунда
+[2024-01-15T10:30:00.002Z] VLOG: hello from background
 [2024-01-15T10:30:00.003Z] VLOG: 🖥️  Hostname: cursor-vm-12345
 [2024-01-15T10:30:00.004Z] VLOG: 🐧 Platform: linux x64
 ```
 
-## 🔐 Безопасность
+## 🔐 Security
 
-При использовании Cursor Background Agent учитывайте:
+When using Cursor Background Agent consider:
 
-1. **GitHub доступ**: Нужны права read-write на репозиторий
-2. **Изолированная среда**: Код выполняется в изолированной Ubuntu VM
-3. **Интернет доступ**: Agent имеет доступ к интернету
-4. **Auto-run команды**: Agent автоматически выполняет команды (риск инъекций)
+1. **GitHub access**: Need read-write permissions on repository
+2. **Isolated environment**: Code runs in isolated Ubuntu VM
+3. **Internet access**: Agent has internet access
+4. **Auto-run commands**: Agent automatically executes commands (injection risk)
 
-## 🐛 Отладка
+## 🐛 Debugging
 
-### Проверка статуса в Cursor
+### Status Check in Cursor
 
-1. Откройте панель Background Agent (`Ctrl+E`)
-2. Выберите ваш агент из списка
-3. Просмотрите логи и статус выполнения
+1. Open Background Agent panel (`Ctrl+E`)
+2. Select your agent from the list
+3. View logs and execution status
 
-### Локальное тестирование
+### Local Testing
 
-Перед отправкой в Background Agent, протестируйте локально:
+Before sending to Background Agent, test locally:
 
 ```bash
-# Тест основного агента
+# Test main agent
 node cursor-agent.js
 
-# Тест Worker Threads версии
+# Test Worker Threads version
 node agent.js
 
-# Тест примера использования
+# Test usage example
 node example.js
 ```
 
-## 📚 Дополнительные ресурсы
+## 📚 Additional Resources
 
-- [Официальная документация Cursor Background Agents](https://docs.cursor.com/background-agent)
-- [Cursor Discord #background-agent канал](https://discord.gg/cursor)
+- [Official Cursor Background Agents documentation](https://docs.cursor.com/background-agent)
+- [Cursor Discord #background-agent channel](https://discord.gg/cursor)
 - Email: background-agent-feedback@cursor.com
 
-## 🎯 Примеры задач для Background Agent
+## 🎯 Task Examples for Background Agent
 
-Примеры промптов для Cursor Background Agent:
+Example prompts for Cursor Background Agent:
 
-1. **"Запусти background agent и следи за логами VLOG"**
-2. **"Проверь работу агента и покажи статистику"**
-3. **"Измени интервал логирования на 1 секунду"**
-4. **"Добавь новую функциональность для мониторинга системы"**
-5. **"Оптимизируй производительность агента"**
+1. **"Start background agent and monitor VLOG logs"**
+2. **"Check agent operation and show statistics"**
+3. **"Change logging interval to 1 second"**
+4. **"Add new functionality for system monitoring"**
+5. **"Optimize agent performance"**
 
-## ✅ Чек-лист готовности
+## ✅ Readiness Checklist
 
-Перед запуском Background Agent убедитесь:
+Before starting Background Agent make sure:
 
-- [ ] Проект в GitHub репозитории
-- [ ] Файл `.cursor/environment.json` создан
-- [ ] `package.json` содержит правильные зависимости
-- [ ] Локальное тестирование прошло успешно
-- [ ] Cursor Background Agent панель доступна (`Ctrl+E`)
+- [ ] Project is in GitHub repository
+- [ ] `.cursor/environment.json` file is created
+- [ ] `package.json` contains correct dependencies
+- [ ] Local testing passed successfully
+- [ ] Cursor Background Agent panel is accessible (`Ctrl+E`)
 
-Теперь ваш Background Agent готов к работе в системе Cursor! 🎉 
+Now your Background Agent is ready to work in Cursor system! 🎉 

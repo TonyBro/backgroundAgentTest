@@ -10,13 +10,13 @@ class BackgroundWorker {
 
     start() {
         if (this.isRunning) {
-            this.sendMessage('VLOG: Worker уже запущен');
+            this.sendMessage('VLOG: Worker is already running');
             return;
         }
 
         this.isRunning = true;
-        this.sendMessage('VLOG: Фоновый worker запущен в отдельном потоке');
-        this.sendMessage('VLOG: привет из бэкграунда');
+        this.sendMessage('VLOG: Background worker started in separate thread');
+        this.sendMessage('VLOG: hello from background');
 
         this.intervalId = setInterval(() => {
             this.logMessage();
@@ -27,7 +27,7 @@ class BackgroundWorker {
         const currentTime = new Date();
         const uptime = Math.floor((currentTime - this.startTime) / 1000);
         
-        this.sendMessage(`VLOG: привет из бэкграунда [Worker ID: ${process.pid}, Время работы: ${uptime}с]`);
+        this.sendMessage(`VLOG: hello from background [Worker ID: ${process.pid}, Uptime: ${uptime}s]`);
     }
 
     sendMessage(message) {
@@ -47,7 +47,7 @@ class BackgroundWorker {
             return;
         }
 
-        this.sendMessage('VLOG: Остановка фонового worker...');
+        this.sendMessage('VLOG: Stopping background worker...');
         this.isRunning = false;
         
         if (this.intervalId) {
@@ -55,7 +55,7 @@ class BackgroundWorker {
             this.intervalId = null;
         }
 
-        this.sendMessage('VLOG: Фоновый worker остановлен');
+        this.sendMessage('VLOG: Background worker stopped');
     }
 
     setInterval(newInterval) {
@@ -67,11 +67,11 @@ class BackgroundWorker {
     }
 }
 
-// Получаем настройки из основного потока
+// Get settings from main thread
 const interval = workerData?.interval || 3000;
 const worker = new BackgroundWorker(interval);
 
-// Обработка сообщений от основного потока
+// Handle messages from main thread
 if (parentPort) {
     parentPort.on('message', (data) => {
         switch (data.command) {
@@ -88,5 +88,5 @@ if (parentPort) {
     });
 }
 
-// Автоматический запуск
+// Auto start
 worker.start(); 

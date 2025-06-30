@@ -1,6 +1,6 @@
 /**
  * Cursor Background Agent - VLOG Logger
- * Оптимизированная версия для работы в удаленной среде Cursor
+ * Optimized version for remote Cursor environment
  */
 
 class CursorBackgroundAgent {
@@ -19,23 +19,23 @@ class CursorBackgroundAgent {
 
     start() {
         if (this.isRunning) {
-            this.log('VLOG: Cursor Background Agent уже запущен');
+            this.log('VLOG: Cursor Background Agent is already running');
             return;
         }
 
         this.isRunning = true;
-        this.log('VLOG: 🚀 Cursor Background Agent запущен в удаленной среде');
+        this.log('VLOG: 🚀 Cursor Background Agent started in remote environment');
         this.log(`VLOG: Session ID: ${this.sessionId}`);
-        this.log('VLOG: привет из бэкграунда');
+        this.log('VLOG: hello from background');
 
-        // Логируем информацию о среде
+        // Log environment information
         this.logEnvironmentInfo();
 
         this.intervalId = setInterval(() => {
             this.logMessage();
         }, this.interval);
 
-        // Обработка сигналов для корректного завершения
+        // Handle signals for graceful shutdown
         process.on('SIGINT', () => this.stop());
         process.on('SIGTERM', () => this.stop());
         process.on('SIGUSR1', () => this.showStatus());
@@ -54,9 +54,9 @@ class CursorBackgroundAgent {
         this.messageCount++;
         const currentTime = new Date();
         const uptime = Math.floor((currentTime - this.startTime) / 1000);
-        const formattedTime = currentTime.toLocaleTimeString('ru-RU');
+        const formattedTime = currentTime.toLocaleTimeString('en-US');
         
-        this.log(`VLOG: привет из бэкграунда [${formattedTime}, Время работы: ${uptime}с, Сообщений: ${this.messageCount}]`);
+        this.log(`VLOG: hello from background [${formattedTime}, Uptime: ${uptime}s, Messages: ${this.messageCount}]`);
     }
 
     log(message) {
@@ -67,17 +67,17 @@ class CursorBackgroundAgent {
     showStatus() {
         const uptime = Math.floor((new Date() - this.startTime) / 1000);
         this.log('VLOG: === STATUS REPORT ===');
-        this.log(`VLOG: Статус: ${this.isRunning ? 'Активен' : 'Остановлен'}`);
-        this.log(`VLOG: Время работы: ${uptime} секунд`);
-        this.log(`VLOG: Интервал: ${this.interval}мс`);
-        this.log(`VLOG: Сообщений отправлено: ${this.messageCount}`);
+        this.log(`VLOG: Status: ${this.isRunning ? 'Active' : 'Stopped'}`);
+        this.log(`VLOG: Uptime: ${uptime} seconds`);
+        this.log(`VLOG: Interval: ${this.interval}ms`);
+        this.log(`VLOG: Messages sent: ${this.messageCount}`);
         this.log(`VLOG: Session ID: ${this.sessionId}`);
         this.log('VLOG: === END STATUS ===');
     }
 
     changeInterval() {
         const newInterval = this.interval === 3000 ? 1000 : 3000;
-        this.log(`VLOG: 🔄 Изменяю интервал с ${this.interval}мс на ${newInterval}мс`);
+        this.log(`VLOG: 🔄 Changing interval from ${this.interval}ms to ${newInterval}ms`);
         this.setInterval(newInterval);
     }
 
@@ -86,7 +86,7 @@ class CursorBackgroundAgent {
             return;
         }
 
-        this.log('\nVLOG: 🛑 Остановка Cursor Background Agent...');
+        this.log('\nVLOG: 🛑 Stopping Cursor Background Agent...');
         this.isRunning = false;
         
         if (this.intervalId) {
@@ -95,13 +95,13 @@ class CursorBackgroundAgent {
         }
 
         const uptime = Math.floor((new Date() - this.startTime) / 1000);
-        this.log(`VLOG: ✅ Cursor Background Agent остановлен. Время работы: ${uptime}с, Сообщений: ${this.messageCount}`);
+        this.log(`VLOG: ✅ Cursor Background Agent stopped. Uptime: ${uptime}s, Messages: ${this.messageCount}`);
         process.exit(0);
     }
 
     setInterval(newInterval) {
         if (newInterval < 500) {
-            this.log('VLOG: ⚠️ Минимальный интервал: 500мс');
+            this.log('VLOG: ⚠️ Minimum interval: 500ms');
             return;
         }
 
@@ -111,11 +111,11 @@ class CursorBackgroundAgent {
             this.intervalId = setInterval(() => {
                 this.logMessage();
             }, this.interval);
-            this.log(`VLOG: 🔄 Интервал изменен на ${this.interval}мс`);
+            this.log(`VLOG: 🔄 Interval changed to ${this.interval}ms`);
         }
     }
 
-    // Метод для получения метрик
+    // Method to get metrics
     getMetrics() {
         const uptime = Math.floor((new Date() - this.startTime) / 1000);
         return {
@@ -129,17 +129,17 @@ class CursorBackgroundAgent {
     }
 }
 
-// Создание и запуск агента
+// Create and start agent
 const agent = new CursorBackgroundAgent(3000);
 
-// Проверяем переменные окружения для настройки
+// Check environment variables for configuration
 const envInterval = process.env.AGENT_INTERVAL;
 if (envInterval && !isNaN(envInterval)) {
     agent.setInterval(parseInt(envInterval));
 }
 
-// Запускаем агент
+// Start agent
 agent.start();
 
-// Экспортируем для возможного использования
+// Export for possible use
 module.exports = CursorBackgroundAgent; 

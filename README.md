@@ -1,94 +1,94 @@
 # Background Agent v2.0
 
-Фоновый агент с поддержкой Worker Threads для периодического вывода сообщений в консоль.
+Background agent with Worker Threads support for periodic console message output.
 
-## ✨ Новые возможности v2.0
+## ✨ New Features v2.0
 
-- 🧵 **Worker Threads** - агент работает в отдельном потоке
-- 🔄 **Многопоточность** - основной поток остается свободным
-- 📡 **Межпоточная коммуникация** - обмен сообщениями между потоками
-- 🎛️ **Расширенное управление** - команды для контроля worker
+- 🧵 **Worker Threads** - agent runs in a separate thread
+- 🔄 **Multithreading** - main thread remains free
+- 📡 **Inter-thread communication** - message exchange between threads
+- 🎛️ **Extended management** - commands for worker control
 
-## Архитектура
+## Architecture
 
 ```
-Основной поток (agent.js)
+Main Thread (agent.js)
 ├── BackgroundAgentManager
 └── Worker Thread (worker.js)
     └── BackgroundWorker
 ```
 
-## Установка и запуск
+## Installation and Launch
 
-### Требования
-- Node.js (версия 12 или выше с поддержкой Worker Threads)
+### Requirements
+- Node.js (version 12 or higher with Worker Threads support)
 
-### Запуск агента
+### Starting the agent
 ```bash
-# Обычный запуск
+# Normal launch
 npm start
 
-# Или напрямую через node
+# Or directly via node
 node agent.js
 
-# Тестирование worker отдельно
+# Test worker separately
 npm run test
 ```
 
-### Запуск в фоновом режиме (Unix/Linux/macOS)
+### Background launch (Unix/Linux/macOS)
 ```bash
-# Запуск в фоне с сохранением логов
+# Background launch with log saving
 nohup npm start > agent.log 2>&1 &
 
-# Или с использованием screen
+# Or using screen
 screen -S background-agent npm start
 
-# Или с использованием pm2 (если установлен)
+# Or using pm2 (if installed)
 pm2 start agent.js --name "background-agent"
 ```
 
-## Возможности
+## Features
 
-- ✅ **Worker Threads** - выполнение в отдельном потоке
-- ✅ Периодический вывод сообщения "VLOG: привет из бэкграунда"
-- ✅ Отображение Worker ID и времени работы
-- ✅ Корректная обработка сигналов завершения (Ctrl+C)
-- ✅ Настраиваемый интервал между сообщениями
-- ✅ Межпоточная коммуникация через message passing
-- ✅ Автоматическое управление жизненным циклом worker
+- ✅ **Worker Threads** - execution in a separate thread
+- ✅ Periodic output of "VLOG: hello from background" message
+- ✅ Display Worker ID and uptime
+- ✅ Correct handling of termination signals (Ctrl+C)
+- ✅ Configurable interval between messages
+- ✅ Inter-thread communication via message passing
+- ✅ Automatic worker lifecycle management
 
-## Файлы проекта
+## Project Files
 
-- `agent.js` - основной файл с менеджером агента
-- `worker.js` - worker thread с логикой фонового агента
-- `package.json` - конфигурация проекта
-- `README.md` - документация
+- `agent.js` - main file with agent manager
+- `worker.js` - worker thread with background agent logic
+- `package.json` - project configuration
+- `README.md` - documentation
 
-## Настройка
+## Configuration
 
-По умолчанию агент выводит сообщения каждые 3 секунды. Чтобы изменить интервал, отредактируйте файл `agent.js`:
+By default, the agent outputs messages every 3 seconds. To change the interval, edit the `agent.js` file:
 
 ```javascript
-const agentManager = new BackgroundAgentManager(5000); // 5 секунд
+const agentManager = new BackgroundAgentManager(5000); // 5 seconds
 ```
 
-## Остановка агента
+## Stopping the agent
 
-- В интерактивном режиме: `Ctrl+C`
-- Если запущен в фоне: найдите PID процесса и завершите его
+- In interactive mode: `Ctrl+C`
+- If running in background: find the process PID and terminate it
   ```bash
   ps aux | grep node
   kill [PID]
   ```
 
-## Пример вывода
+## Example Output
 
 ```
-VLOG: Запуск фонового агента в отдельном потоке...
-VLOG: Фоновый worker запущен в отдельном потоке
-VLOG: привет из бэкграунда
-VLOG: привет из бэкграунда [Worker ID: 12345, Время работы: 3с]
-VLOG: привет из бэкграунда [Worker ID: 12345, Время работы: 6с]
+VLOG: Starting background agent in separate thread...
+VLOG: Background worker started in separate thread
+VLOG: hello from background
+VLOG: hello from background [Worker ID: 12345, Uptime: 3s]
+VLOG: hello from background [Worker ID: 12345, Uptime: 6s]
 ...
 ```
 
@@ -99,25 +99,25 @@ VLOG: привет из бэкграунда [Worker ID: 12345, Время ра�
 ```javascript
 const agent = new BackgroundAgentManager(interval);
 
-// Запуск
+// Start
 agent.start();
 
-// Остановка
+// Stop
 agent.stop();
 
-// Изменение интервала
+// Change interval
 agent.setInterval(5000);
 
-// Отправка команды worker
+// Send command to worker
 agent.sendCommand('customCommand', { data: 'value' });
 
-// Получение статуса
+// Get status
 const status = agent.getStatus();
 ```
 
-## Преимущества Worker Threads
+## Worker Threads Advantages
 
-1. **Неблокирующее выполнение** - основной поток остается отзывчивым
-2. **Изоляция** - worker работает в изолированном контексте
-3. **Масштабируемость** - возможность создания множественных worker
-4. **Стабильность** - сбой в worker не влияет на основной поток 
+1. **Non-blocking execution** - main thread remains responsive
+2. **Isolation** - worker runs in isolated context
+3. **Scalability** - ability to create multiple workers
+4. **Stability** - worker crash doesn't affect main thread 

@@ -1,6 +1,6 @@
 {
   "install": "npm install",
-  "start": "echo '🚀 Cursor Background Agent environment готова к работе'",
+  "start": "echo '🚀 Cursor Background Agent environment ready to work'",
   "terminals": [
     {
       "name": "Background VLOG Agent",
