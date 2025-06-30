@@ -1,30 +1,30 @@
 const BackgroundAgentManager = require('./agent.js');
 
-// Пример использования фонового агента с worker threads
-console.log('=== Пример использования Background Agent v2.0 ===\n');
+// Example usage of background agent with worker threads
+console.log('=== Background Agent v2.0 Usage Example ===\n');
 
-// Создаем агент с интервалом 2 секунды
+// Create agent with 2 second interval
 const agent = new BackgroundAgentManager(2000);
 
-console.log('Статус до запуска:', agent.getStatus());
+console.log('Status before start:', agent.getStatus());
 
-// Запускаем агент
+// Start agent
 agent.start();
 
-// Через 10 секунд изменим интервал
+// After 10 seconds change interval
 setTimeout(() => {
-    console.log('\n--- Изменяем интервал на 1 секунду ---');
+    console.log('\n--- Changing interval to 1 second ---');
     agent.setInterval(1000);
 }, 10000);
 
-// Через 20 секунд покажем статус
+// After 20 seconds show status
 setTimeout(() => {
-    console.log('\n--- Текущий статус ---');
+    console.log('\n--- Current status ---');
     console.log(agent.getStatus());
 }, 20000);
 
-// Через 30 секунд остановим агент
+// After 30 seconds stop agent
 setTimeout(() => {
-    console.log('\n--- Останавливаем агент ---');
+    console.log('\n--- Stopping agent ---');
     agent.stop();
 }, 30000); 

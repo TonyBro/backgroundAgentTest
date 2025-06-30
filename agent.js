@@ -10,60 +10,60 @@ class BackgroundAgentManager {
 
     start() {
         if (this.isRunning) {
-            console.log('VLOG: Менеджер агента уже запущен');
+            console.log('VLOG: Agent manager is already running');
             return;
         }
 
-        console.log('VLOG: Запуск фонового агента в отдельном потоке...');
+        console.log('VLOG: Starting background agent in separate thread...');
         
-        // Создаем worker thread
+        // Create worker thread
         this.worker = new Worker(path.join(__dirname, 'worker.js'), {
             workerData: { interval: this.interval }
         });
 
-        // Обработка сообщений от worker
+        // Handle messages from worker
         this.worker.on('message', (data) => {
             if (data.type === 'log') {
                 console.log(data.message);
             }
         });
 
-        // Обработка ошибок worker
+        // Handle worker errors
         this.worker.on('error', (error) => {
-            console.error('VLOG: Ошибка в worker thread:', error);
+            console.error('VLOG: Error in worker thread:', error);
         });
 
-        // Обработка завершения worker
+        // Handle worker exit
         this.worker.on('exit', (code) => {
             if (code !== 0) {
-                console.error(`VLOG: Worker остановлен с кодом ${code}`);
+                console.error(`VLOG: Worker stopped with code ${code}`);
             }
             this.isRunning = false;
         });
 
         this.isRunning = true;
 
-        // Обработка сигналов для корректного завершения
+        // Handle signals for graceful shutdown
         process.on('SIGINT', () => this.stop());
         process.on('SIGTERM', () => this.stop());
     }
 
     stop() {
         if (!this.isRunning || !this.worker) {
-            console.log('VLOG: Агент не запущен');
+            console.log('VLOG: Agent is not running');
             return;
         }
 
-        console.log('\nVLOG: Остановка фонового агента...');
+        console.log('\nVLOG: Stopping background agent...');
         
-        // Отправляем команду остановки worker
+        // Send stop command to worker
         this.worker.postMessage({ command: 'stop' });
         
-        // Завершаем worker thread
+        // Terminate worker thread
         setTimeout(() => {
             this.worker.terminate();
             this.isRunning = false;
-            console.log('VLOG: Фоновый агент остановлен');
+            console.log('VLOG: Background agent stopped');
             process.exit(0);
         }, 1000);
     }
@@ -78,14 +78,14 @@ class BackgroundAgentManager {
         }
     }
 
-    // Метод для отправки команд worker
+    // Method to send commands to worker
     sendCommand(command, data = {}) {
         if (this.isRunning && this.worker) {
             this.worker.postMessage({ command, ...data });
         }
     }
 
-    // Получение статуса
+    // Get status
     getStatus() {
         return {
             isRunning: this.isRunning,
@@ -95,15 +95,15 @@ class BackgroundAgentManager {
     }
 }
 
-// Проверяем, что это основной поток
+// Check if this is the main thread
 if (isMainThread) {
-    // Создание и запуск менеджера агента
-    const agentManager = new BackgroundAgentManager(3000); // Сообщение каждые 3 секунды
+    // Create and start agent manager
+    const agentManager = new BackgroundAgentManager(3000); // Message every 3 seconds
     agentManager.start();
 
-    // Экспортируем класс для возможного использования в других модулях
+    // Export class for possible use in other modules
     module.exports = BackgroundAgentManager;
 } else {
-    // Этот код не должен выполняться, так как worker находится в отдельном файле
-    console.log('VLOG: Ошибка - попытка запуска в worker thread');
+    // This code should not execute since worker is in a separate file
+    console.log('VLOG: Error - attempt to run in worker thread');
 } 
