@@ -73,7 +73,7 @@ Log File: ${this.logFile}
 
         this.isRunning = true;
         this.log('🔵 ═══════════════════════════════════════');
-        this.log('🔵   Agent2 автоматически запущен от Agent1');
+        this.log('🔵        Agent2 запущен вручную');
         this.log('🔵 ═══════════════════════════════════════');
         this.log('🚀 Запуск Agent2 как TCP клиента');
         this.log(`📋 Session ID: ${this.sessionId}`);
@@ -145,7 +145,7 @@ Log File: ${this.logFile}
     sendReady() {
         const message = {
             type: 'ready',
-            data: 'Agent2 запущен и готов к работе',
+            data: 'Agent2 запущен вручную и готов к работе',
             timestamp: new Date().toISOString(),
             sender: this.agentId
         };

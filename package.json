@@ -4,11 +4,17 @@
   "description": "Система двух независимых агентов с пинг-понг коммуникацией через TCP сокеты",
   "main": "cursor-agent.js",
   "scripts": {
+    "agent1": "node cursor-agent.js",
+    "agent2": "node cursor-agent-secondary.js",
     "server": "node cursor-agent.js",
     "client": "node cursor-agent-secondary.js",
     "start": "node cursor-agent.js",
-    "dev": "node cursor-agent.js",
-    "test": "node cursor-agent.js"
+    "start:agent1": "node cursor-agent.js",
+    "start:agent2": "node cursor-agent-secondary.js",
+    "run:server": "node cursor-agent.js",
+    "run:client": "node cursor-agent-secondary.js",
+    "ping-pong:server": "node cursor-agent.js",
+    "ping-pong:client": "node cursor-agent-secondary.js"
   },
   "engines": {
     "node": ">=12.0.0"
