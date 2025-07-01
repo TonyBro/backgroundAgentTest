@@ -1,35 +1,29 @@
 {
   "name": "pingpong-agents",
   "version": "4.0.0",
-  "description": "AI Background Agent система с поддержкой Initial Prompt, внешних инструкций через WebSocket/REST/File и фазовой обработки задач",
+  "description": "Background Agent система с простым TCP подключением и отправкой \"Привет\" каждые 10 секунд",
   "main": "cursor-agent.js",
   "scripts": {
     "agent1": "node cursor-agent.js",
     "agent2": "node cursor-agent-secondary.js",
-    "ai-agent": "node cursor-agent-secondary.js",
+    "background-agent": "node cursor-agent-secondary.js",
     "server": "node cursor-agent.js",
     "client": "node cursor-agent-secondary.js",
     "start": "node cursor-agent.js",
     "start:agent1": "node cursor-agent.js",
     "start:agent2": "node cursor-agent-secondary.js",
-    "start:ai-agent": "node cursor-agent-secondary.js",
+    "start:background": "node cursor-agent-secondary.js",
     "run:server": "node cursor-agent.js",
     "run:client": "node cursor-agent-secondary.js",
-    "run:ai-agent": "node cursor-agent-secondary.js",
     "ping-pong:server": "node cursor-agent.js",
-    "ping-pong:client": "node cursor-agent-secondary.js",
-    "ai:agent": "node cursor-agent-secondary.js"
+    "ping-pong:client": "node cursor-agent-secondary.js"
   },
   "dependencies": {
-    "ws": "^8.14.2",
-    "express": "^4.18.2",
-    "chokidar": "^3.5.3",
-    "uuid": "^9.0.1"
   },
   "engines": {
     "node": ">=14.0.0"
   },
-  "keywords": ["ai-agent", "background-agent", "websocket", "rest-api", "file-monitoring", "phases", "initial-prompt", "ping-pong", "tcp", "sockets", "communication", "networking"],
+  "keywords": ["background-agent", "tcp", "sockets", "communication", "networking", "ping-pong"],
   "author": "",
   "license": "ISC"
 } 
