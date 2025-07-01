@@ -4,6 +4,8 @@
  */
 
 const net = require('net');
+const fs = require('fs');
+const path = require('path');
 
 class CursorBackgroundAgentClient {
     constructor(host = 'localhost', port = 3001) {
@@ -24,10 +26,43 @@ class CursorBackgroundAgentClient {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 10;
         this.reconnectInterval = 2000;
+        
+        // Настройки логирования
+        this.logDir = path.join(__dirname, 'logs');
+        this.logFile = path.join(this.logDir, `agent2-${this.sessionId}-${Date.now()}.log`);
+        this.stepCounter = 0;
+        
+        // Создаем директорию для логов
+        this.initializeLogging();
     }
 
     generateSessionId() {
         return Math.random().toString(36).substring(2, 15);
+    }
+
+    initializeLogging() {
+        try {
+            // Создаем директорию для логов если не существует
+            if (!fs.existsSync(this.logDir)) {
+                fs.mkdirSync(this.logDir, { recursive: true });
+            }
+            
+            // Записываем заголовок лог файла
+            const header = `
+=== CURSOR BACKGROUND AGENT2 LOG ===
+Session ID: ${this.sessionId}
+Start Time: ${this.startTime.toISOString()}
+PID: ${process.pid}
+Target: ${this.host}:${this.port}
+Log File: ${this.logFile}
+=====================================
+
+`;
+            fs.writeFileSync(this.logFile, header);
+            console.log(`📝 Логи Agent2 сохраняются в: ${this.logFile}`);
+        } catch (error) {
+            console.warn(`⚠️ Не удалось создать лог файл Agent2: ${error.message}`);
+        }
     }
 
     start() {
@@ -181,9 +216,40 @@ class CursorBackgroundAgentClient {
         }
     }
 
-    log(message) {
+    log(message, step = null, data = null) {
         const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] ${message}`);
+        this.stepCounter++;
+        
+        // Формируем сообщение для консоли
+        const consoleMessage = `[${timestamp}] ${message}`;
+        console.log(consoleMessage);
+        
+        // Формируем детальное сообщение для файла
+        const uptime = Math.floor((new Date() - this.startTime) / 1000);
+        const stepInfo = step ? `[STEP-${step}]` : `[STEP-${this.stepCounter}]`;
+        
+        const fileMessage = `${timestamp} ${stepInfo} [${this.agentId}] [UPTIME:${uptime}s] ${message}`;
+        
+        // Добавляем дополнительные данные если есть
+        let additionalData = '';
+        if (data) {
+            additionalData = `\n    └─ DATA: ${JSON.stringify(data, null, 2).split('\n').join('\n    ')}`;
+        }
+        
+        // Добавляем статистику к важным событиям
+        let stats = '';
+        if (message.includes('PING') || message.includes('PONG') || message.includes('подключ') || message.includes('хэндшейк')) {
+            stats = `\n    └─ STATS: Connected:${this.isConnected} | Handshake:${this.handshakeComplete} | Messages:${this.messageCount} | Reconnects:${this.reconnectAttempts}`;
+        }
+        
+        const fullLogEntry = fileMessage + additionalData + stats + '\n';
+        
+        // Записываем в файл
+        try {
+            fs.appendFileSync(this.logFile, fullLogEntry);
+        } catch (error) {
+            console.warn(`⚠️ Ошибка записи в лог файл Agent2: ${error.message}`);
+        }
     }
 
     showStatus() {

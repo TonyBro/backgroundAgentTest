@@ -6,6 +6,7 @@
 const net = require('net');
 const { exec } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 class CursorBackgroundAgentServer {
     constructor(port = 3001) {
@@ -27,23 +28,62 @@ class CursorBackgroundAgentServer {
         
         // Управление вторым агентом
         this.secondaryAgentLaunched = false;
+        
+        // Настройки логирования
+        this.logDir = path.join(__dirname, 'logs');
+        this.logFile = path.join(this.logDir, `agent1-${this.sessionId}-${Date.now()}.log`);
+        this.stepCounter = 0;
+        
+        // Создаем директорию для логов
+        this.initializeLogging();
     }
 
     generateSessionId() {
         return Math.random().toString(36).substring(2, 15);
     }
 
+    initializeLogging() {
+        try {
+            // Создаем директорию для логов если не существует
+            if (!fs.existsSync(this.logDir)) {
+                fs.mkdirSync(this.logDir, { recursive: true });
+            }
+            
+            // Записываем заголовок лог файла
+            const header = `
+=== CURSOR BACKGROUND AGENT1 LOG ===
+Session ID: ${this.sessionId}
+Start Time: ${this.startTime.toISOString()}
+PID: ${process.pid}
+Port: ${this.port}
+Log File: ${this.logFile}
+=====================================
+
+`;
+            fs.writeFileSync(this.logFile, header);
+            console.log(`📝 Логи Agent1 сохраняются в: ${this.logFile}`);
+        } catch (error) {
+            console.warn(`⚠️ Не удалось создать лог файл: ${error.message}`);
+        }
+    }
+
     start() {
         if (this.isRunning) {
-            this.log('🔄 Сервер агент уже запущен');
+            this.log('🔄 Сервер агент уже запущен', 'START-CHECK');
             return;
         }
 
         this.isRunning = true;
-        this.log('🚀 Запуск Agent1 как TCP сервера');
-        this.log(`📋 Session ID: ${this.sessionId}`);
-        this.log(`🔧 PID: ${process.pid}`);
-        this.log(`🌐 Порт: ${this.port}`);
+        this.log('🚀 Запуск Agent1 как TCP сервера', 'START-INIT', {
+            sessionId: this.sessionId,
+            pid: process.pid,
+            port: this.port,
+            logFile: this.logFile
+        });
+        
+        this.log(`📋 Session ID: ${this.sessionId}`, 'SESSION-ID');
+        this.log(`🔧 PID: ${process.pid}`, 'PROCESS-ID');
+        this.log(`🌐 Порт: ${this.port}`, 'TCP-PORT');
 
         this.createTCPServer();
 
@@ -55,7 +95,11 @@ class CursorBackgroundAgentServer {
 
     createTCPServer() {
         this.server = net.createServer((socket) => {
-            this.log('🔗 Клиент подключился к серверу');
+            this.log('🔗 Клиент подключился к серверу', 'CLIENT-CONNECTED', {
+                remoteAddress: socket.remoteAddress,
+                remotePort: socket.remotePort,
+                localPort: socket.localPort
+            });
             this.clientSocket = socket;
             this.isClientConnected = true;
 
@@ -88,8 +132,12 @@ class CursorBackgroundAgentServer {
         });
 
         this.server.listen(this.port, () => {
-            this.log(`✅ TCP сервер запущен на порту ${this.port}`);
-            this.log('⏳ Ожидание подключения Agent2...');
+            this.log(`✅ TCP сервер запущен на порту ${this.port}`, 'TCP-SERVER-START', {
+                port: this.port,
+                host: 'localhost',
+                timestamp: new Date().toISOString()
+            });
+            this.log('⏳ Ожидание подключения Agent2...', 'WAITING-CLIENT');
             
             // Автоматически запускаем второй агент в новом терминале
             setTimeout(() => {
@@ -194,7 +242,8 @@ class CursorBackgroundAgentServer {
     }
 
     handleClientMessage(message) {
-        this.log(`📨 [${this.agentId}] Получено от ${message.sender}: ${message.type} - "${message.data}"`);
+        this.log(`📨 [${this.agentId}] Получено от ${message.sender}: ${message.type} - "${message.data}"`, 
+                 `MSG-${message.type.toUpperCase()}`, message);
 
         switch (message.type) {
             case 'ready':
@@ -207,7 +256,10 @@ class CursorBackgroundAgentServer {
                 this.handlePong(message);
                 break;
             default:
-                this.log(`⚠️ Неизвестный тип сообщения: ${message.type}`);
+                this.log(`⚠️ Неизвестный тип сообщения: ${message.type}`, 'MSG-UNKNOWN', { 
+                    unknownType: message.type,
+                    fullMessage: message 
+                });
         }
     }
 
@@ -248,7 +300,11 @@ class CursorBackgroundAgentServer {
 
     sendPing() {
         if (!this.handshakeComplete || !this.isClientConnected || !this.clientSocket) {
-            this.log('⚠️ Нельзя отправить пинг - соединение не готово');
+            this.log('⚠️ Нельзя отправить пинг - соединение не готово', 'PING-ERROR', {
+                handshakeComplete: this.handshakeComplete,
+                isClientConnected: this.isClientConnected,
+                hasClientSocket: !!this.clientSocket
+            });
             return;
         }
 
@@ -261,12 +317,21 @@ class CursorBackgroundAgentServer {
         };
 
         this.sendToClient(pingMessage);
-        this.log(`🏓 [${this.agentId}] Отправлен PING: "${pingMessage.data}"`);
+        this.log(`🏓 [${this.agentId}] Отправлен PING: "${pingMessage.data}"`, 'PING-SENT', {
+            pingNumber: this.pingCount,
+            message: pingMessage
+        });
     }
 
     handlePong(message) {
         this.pongCount++;
-        this.log(`🏓 [${this.agentId}] Получен PONG от ${message.sender}: "${message.data}" (#${this.pongCount})`);
+        this.log(`🏓 [${this.agentId}] Получен PONG от ${message.sender}: "${message.data}" (#${this.pongCount})`, 
+                 'PONG-RECEIVED', {
+                     pongNumber: this.pongCount,
+                     sender: message.sender,
+                     data: message.data,
+                     receivedAt: new Date().toISOString()
+                 });
         
         // Отправляем следующий пинг через секунду
         setTimeout(() => {
@@ -280,9 +345,40 @@ class CursorBackgroundAgentServer {
         }
     }
 
-    log(message) {
+    log(message, step = null, data = null) {
         const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] ${message}`);
+        this.stepCounter++;
+        
+        // Формируем сообщение для консоли
+        const consoleMessage = `[${timestamp}] ${message}`;
+        console.log(consoleMessage);
+        
+        // Формируем детальное сообщение для файла
+        const uptime = Math.floor((new Date() - this.startTime) / 1000);
+        const stepInfo = step ? `[STEP-${step}]` : `[STEP-${this.stepCounter}]`;
+        
+        const fileMessage = `${timestamp} ${stepInfo} [${this.agentId}] [UPTIME:${uptime}s] ${message}`;
+        
+        // Добавляем дополнительные данные если есть
+        let additionalData = '';
+        if (data) {
+            additionalData = `\n    └─ DATA: ${JSON.stringify(data, null, 2).split('\n').join('\n    ')}`;
+        }
+        
+        // Добавляем статистику к важным событиям
+        let stats = '';
+        if (message.includes('PING') || message.includes('PONG') || message.includes('Хэндшейк')) {
+            stats = `\n    └─ STATS: Pings:${this.pingCount} | Pongs:${this.pongCount} | Connected:${this.isClientConnected} | Handshake:${this.handshakeComplete}`;
+        }
+        
+        const fullLogEntry = fileMessage + additionalData + stats + '\n';
+        
+        // Записываем в файл
+        try {
+            fs.appendFileSync(this.logFile, fullLogEntry);
+        } catch (error) {
+            console.warn(`⚠️ Ошибка записи в лог файл: ${error.message}`);
+        }
     }
 
     showStatus() {
@@ -305,28 +401,54 @@ class CursorBackgroundAgentServer {
             return;
         }
 
-        this.log('\n🛑 Остановка сервер агента...');
+        this.log('\n🛑 Остановка сервер агента...', 'SHUTDOWN-START');
         this.isRunning = false;
 
         // Закрываем соединение с клиентом
         if (this.clientSocket) {
             this.clientSocket.end();
             this.clientSocket = null;
+            this.log('🔌 Соединение с клиентом закрыто', 'CLIENT-DISCONNECTED');
         }
 
         // Закрываем сервер
         if (this.server) {
             this.server.close(() => {
-                this.log('🔒 TCP сервер закрыт');
+                this.log('🔒 TCP сервер закрыт', 'SERVER-CLOSED');
             });
         }
 
         const uptime = Math.floor((new Date() - this.startTime) / 1000);
-        this.log(`✅ Сервер агент остановлен. Время работы: ${uptime}с`);
-        this.log(`📊 Статистика: Пингов: ${this.pingCount}, Понгов: ${this.pongCount}`);
+        const finalStats = {
+            uptime: uptime,
+            pingCount: this.pingCount,
+            pongCount: this.pongCount,
+            secondaryAgentLaunched: this.secondaryAgentLaunched,
+            totalSteps: this.stepCounter,
+            sessionId: this.sessionId
+        };
+
+        this.log(`✅ Сервер агент остановлен. Время работы: ${uptime}с`, 'SHUTDOWN-COMPLETE', finalStats);
+        this.log(`📊 Статистика: Пингов: ${this.pingCount}, Понгов: ${this.pongCount}`, 'FINAL-STATS');
         
         if (this.secondaryAgentLaunched) {
-            this.log('💡 Не забудьте закрыть окно Agent2 вручную');
+            this.log('💡 Не забудьте закрыть окно Agent2 вручную', 'CLEANUP-REMINDER');
+        }
+        
+        // Записываем финальный footer в лог файл
+        const footer = `
+=====================================
+SESSION ENDED: ${new Date().toISOString()}
+TOTAL STEPS: ${this.stepCounter}
+UPTIME: ${uptime} seconds
+PING-PONG: ${this.pingCount}/${this.pongCount}
+=====================================
+
+`;
+        try {
+            fs.appendFileSync(this.logFile, footer);
+        } catch (error) {
+            console.warn(`⚠️ Ошибка записи footer в лог: ${error.message}`);
         }
         
         process.exit(0);
