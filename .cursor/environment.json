@@ -1,14 +1,26 @@
 {
   "install": "npm install",
-  "start": "echo '🚀 Cursor Background Agent environment готова к работе'",
+  "start": "echo '🚀 Multi-Agent Background System Ready - 5 Agents: Operator | Manager | QA | Developer | Architect'",
   "terminals": [
     {
-      "name": "Background VLOG Agent",
-      "command": "node cursor-agent.js"
+      "name": "🎛️ System Operator Agent",
+      "command": "echo 'Starting System Operator Agent' && npm run agent:operator"
     },
     {
-      "name": "Status Monitor",
-      "command": "echo '📊 Monitoring Background Agent Status...' && sleep 5 && while true; do echo '--- Agent Status Check ---' && ps aux | grep 'node cursor-agent.js' | grep -v grep && sleep 30; done"
+      "name": "📋 Project Manager Agent", 
+      "command": "echo 'Starting Project Manager Agent' && npm run agent:manager"
+    },
+    {
+      "name": "🧪 QA Testing Agent",
+      "command": "echo 'Starting QA Agent' && npm run agent:qa"
+    },
+    {
+      "name": "💻 Developer Agent",
+      "command": "echo 'Starting Developer Agent' && npm run agent:developer"
+    },
+    {
+      "name": "🏗️ System Architect Agent",
+      "command": "echo 'Starting System Architect Agent' && npm run agent:architect"
     }
   ]
 } 
