@@ -1,9 +1,11 @@
 /**
  * Cursor Background Agent - Server Agent (Agent1)
- * Первый независимый агент, который работает как TCP сервер и ждет подключения второго агента
+ * Первый независимый агент, который работает как TCP сервер и автоматически запускает второй агент
  */
 
 const net = require('net');
+const { exec } = require('child_process');
+const path = require('path');
 
 class CursorBackgroundAgentServer {
     constructor(port = 3001) {
@@ -22,6 +24,9 @@ class CursorBackgroundAgentServer {
         // Счетчики пинг-понг
         this.pingCount = 0;
         this.pongCount = 0;
+        
+        // Управление вторым агентом
+        this.secondaryAgentLaunched = false;
     }
 
     generateSessionId() {
@@ -85,10 +90,106 @@ class CursorBackgroundAgentServer {
         this.server.listen(this.port, () => {
             this.log(`✅ TCP сервер запущен на порту ${this.port}`);
             this.log('⏳ Ожидание подключения Agent2...');
+            
+            // Автоматически запускаем второй агент в новом терминале
+            setTimeout(() => {
+                this.launchSecondaryAgentInNewTerminal();
+            }, 1000);
         });
 
         this.server.on('error', (error) => {
             this.log(`❌ Ошибка сервера: ${error.message}`);
+        });
+    }
+
+    launchSecondaryAgentInNewTerminal() {
+        if (this.secondaryAgentLaunched) {
+            this.log('⚠️ Второй агент уже был запущен');
+            return;
+        }
+
+        this.log('🚀 Создание Agent2 в новом Cursor табе...');
+        
+        // Попытка использовать Cursor API для создания агента в новом табе
+        this.createCursorAgentTab().catch(error => {
+            this.log(`⚠️ Cursor API недоступен: ${error.message}`);
+            this.log('🔄 Переход на системный способ запуска...');
+            this.fallbackToSystemLaunch();
+        });
+    }
+
+    async createCursorAgentTab() {
+        // Проверяем доступность Cursor API
+        if (typeof cursor === 'undefined' || !cursor.spawnTab) {
+            throw new Error('Cursor API не найден');
+        }
+
+        const sessionId = this.sessionId;
+        const serverPort = this.port;
+
+        await cursor.spawnTab({
+            name: "Agent2-Client",
+            entry: async (ctx) => {
+                const agent2 = await ctx.spawnAgent({
+                    name: "Agent2",
+                    systemPrompt: "Ты Agent2 - TCP клиент для пинг-понг коммуникации. Подключись к серверу Agent1 и участвуй в пинг-понг обмене сообщениями. Отвечай на пинги понгами.",
+                });
+
+                // Запускаем задачу Agent2
+                const result = await agent2.runTask(`
+                    Выполни следующие действия:
+                    1. Создай TCP клиент для подключения к localhost:${serverPort}
+                    2. Подключись к серверу Agent1
+                    3. Отправь сигнал готовности: "Agent2 запущен через Cursor API и готов к работе"
+                    4. Участвуй в хэндшейке: отвечай "Привет!" на приветствие сервера
+                    5. Участвуй в пинг-понг коммуникации: на каждый PING отвечай PONG
+                    6. Логируй все действия в консоль
+                    
+                    Используй Node.js модуль 'net' для TCP соединения.
+                    Session ID родительского Agent1: ${sessionId}
+                `);
+
+                // Сохраняем результат в shared context
+                ctx.shared = ctx.shared || {};
+                ctx.shared.agent2Started = true;
+                ctx.shared.agent2SessionId = sessionId;
+                ctx.shared.agent2Result = result;
+                
+                return result;
+            },
+        });
+
+        this.log('✅ Agent2 создан в новом Cursor табе через spawnTab API');
+        this.secondaryAgentLaunched = true;
+    }
+
+    fallbackToSystemLaunch() {
+        this.log('🔄 Fallback: запуск Agent2 в новом терминале...');
+        
+        // Простое решение через open команду для macOS
+        const command = `open -a Terminal "${__dirname}/cursor-agent-secondary.js"`;
+        
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                this.log(`⚠️ Не удалось открыть через Terminal.app: ${error.message}`);
+                
+                // Попробуем альтернативный способ
+                this.log('🔄 Попытка запуска напрямую...');
+                const { spawn } = require('child_process');
+                
+                const agent2 = spawn('node', ['cursor-agent-secondary.js'], {
+                    cwd: __dirname,
+                    detached: true,
+                    stdio: 'ignore'
+                });
+                
+                agent2.unref();
+                this.log('✅ Agent2 запущен в фоновом режиме (fallback)');
+                this.secondaryAgentLaunched = true;
+            } else {
+                this.log('✅ Agent2 запущен в новом терминале (fallback)');
+                this.secondaryAgentLaunched = true;
+            }
         });
     }
 
@@ -193,6 +294,7 @@ class CursorBackgroundAgentServer {
         this.log(`TCP порт: ${this.port}`);
         this.log(`Клиент подключен: ${this.isClientConnected}`);
         this.log(`Хэндшейк завершен: ${this.handshakeComplete}`);
+        this.log(`Agent2 автозапущен: ${this.secondaryAgentLaunched}`);
         this.log(`Пингов отправлено: ${this.pingCount}`);
         this.log(`Понгов получено: ${this.pongCount}`);
         this.log('=== END STATUS ===');
@@ -223,6 +325,10 @@ class CursorBackgroundAgentServer {
         this.log(`✅ Сервер агент остановлен. Время работы: ${uptime}с`);
         this.log(`📊 Статистика: Пингов: ${this.pingCount}, Понгов: ${this.pongCount}`);
         
+        if (this.secondaryAgentLaunched) {
+            this.log('💡 Не забудьте закрыть окно Agent2 вручную');
+        }
+        
         process.exit(0);
     }
 
@@ -236,6 +342,7 @@ class CursorBackgroundAgentServer {
             port: this.port,
             clientConnected: this.isClientConnected,
             handshakeComplete: this.handshakeComplete,
+            secondaryAgentLaunched: this.secondaryAgentLaunched,
             pingCount: this.pingCount,
             pongCount: this.pongCount
         };

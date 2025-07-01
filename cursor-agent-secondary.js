@@ -37,6 +37,9 @@ class CursorBackgroundAgentClient {
         }
 
         this.isRunning = true;
+        this.log('🔵 ═══════════════════════════════════════');
+        this.log('🔵   Agent2 автоматически запущен от Agent1');
+        this.log('🔵 ═══════════════════════════════════════');
         this.log('🚀 Запуск Agent2 как TCP клиента');
         this.log(`📋 Session ID: ${this.sessionId}`);
         this.log(`🔧 PID: ${process.pid}`);
