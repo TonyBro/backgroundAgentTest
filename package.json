@@ -21,15 +21,29 @@
     "ai:agent": "node cursor-agent-secondary.js"
   },
   "dependencies": {
-    "ws": "^8.14.2",
-    "express": "^4.18.2",
     "chokidar": "^3.5.3",
-    "uuid": "^9.0.1"
+    "express": "^4.18.2",
+    "puppeteer-core": "^21.11.0",
+    "uuid": "^9.0.1",
+    "ws": "^8.14.2"
   },
   "engines": {
     "node": ">=14.0.0"
   },
-  "keywords": ["ai-agent", "background-agent", "websocket", "rest-api", "file-monitoring", "phases", "initial-prompt", "ping-pong", "tcp", "sockets", "communication", "networking"],
+  "keywords": [
+    "ai-agent",
+    "background-agent",
+    "websocket",
+    "rest-api",
+    "file-monitoring",
+    "phases",
+    "initial-prompt",
+    "ping-pong",
+    "tcp",
+    "sockets",
+    "communication",
+    "networking"
+  ],
   "author": "",
   "license": "ISC"
-} 
+}
